@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block head %}
+<title>Dashboard - System Monitor</title>
+<style>
+    .stat-card {
+        background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%);
+        border: 1px solid #333;
+        border-radius: 15px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        background: linear-gradient(45deg, #007bff, #00e1ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #333;
+    }
+    .progress-bar {
+        transition: width 0.5s ease-in-out;
+    }
+    .system-info {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    .battery-indicator {
+        position: relative;
+        width: 100%;
+        height: 30px;
+        background: #333;
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .battery-level {
+        height: 100%;
+        transition: width 0.5s ease;
+        border-radius: 15px;
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block pagetitle %}
+<div class="navbar-nav px-3 w-100">
+    <div class="text-light fw-bold fs-4">System Dashboard</div>
+</div>
+{% endblock %}
+
+{% block body %}
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+    <div class="container-fluid py-4">
+        <!-- Real-time Stats Section -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="stat-icon">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <h3 class="text-light mb-0 cpu-percent">0%</h3>
+                    </div>
+                    <h5 class="text-light mb-3">CPU Usage</h5>
+                    <div class="progress">
+                        <div class="progress-bar bg-info cpu-progress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="stat-icon">
+                            <i class="fas fa-memory"></i>
+                        </div>
+                        <h3 class="text-light mb-0 memory-percent">0%</h3>
+                    </div>
+                    <h5 class="text-light mb-3">Memory Usage</h5>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning memory-progress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="stat-icon">
+                            <i class="fas fa-hdd"></i>
+                        </div>
+                        <h3 class="text-light mb-0 disk-percent">0%</h3>
+                    </div>
+                    <h5 class="text-light mb-3">Disk Usage</h5>
+                    <div class="progress">
+                        <div class="progress-bar bg-success disk-progress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="stat-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <h3 class="text-light mb-0 process-count">0</h3>
+                    </div>
+                    <h5 class="text-light mb-3">Active Processes</h5>
+                    <div class="progress">
+                        <div class="progress-bar bg-danger process-progress" role="progressbar" style="width: 100%"></div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Battery Status -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="stat-card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="stat-icon mb-2">
+                                <i class="fas fa-battery-full battery-icon"></i>
+                            </div>
+                            <h5 class="text-light">Battery Status</h5>
+                        </div>
+                        <div class="text-end">
+                            <h3 class="text-light mb-2 battery-percent">0%</h3>
+                            <p class="text-light mb-0 battery-status">Unknown</p>
+                            <p class="text-light mb-0 battery-time">--:--</p>
+                        </div>
+                    </div>
+                    <div class="battery-indicator">
+                        <div class="battery-level bg-success" style="width: 0%"></div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- System Information -->
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="system-info p-4">
+                    <h5 class="text-light mb-4">Platform Info</h5>
+                    <div class="text-light" id="system-info">
+                        <p><strong>System:</strong> {{ context.platform_info.system }}</p>
+                        <p><strong>Node:</strong> {{ context.platform_info.node }}</p>
+                        <p><strong>Release:</strong> {{ context.platform_info.release }}</p>
+                        <p><strong>Version:</strong> {{ context.platform_info.version }}</p>
+                        <p><strong>Machine:</strong> {{ context.platform_info.machine }}</p>
+                        <p><strong>Processor:</strong> {{ context.platform_info.processor }}</p>
+                        <p><strong>Boot Time:</strong> {{ context.platform_info.boot_time }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="system-info p-4">
+                    <h5 class="text-light mb-4">Memory Info</h5>
+                    <div class="text-light" id="memory-info">
+                        <p><strong>Total:</strong> {{ context.memory_info.total }}</p>
+                        <p><strong>Available:</strong> {{ context.memory_info.available }}</p>
+                        <p><strong>Used:</strong> {{ context.memory_info.used }}</p>
+                        <p><strong>Free:</strong> {{ context.memory_info.free }}</p>
+                        <p><strong>Swap Total:</strong> {{ context.memory_info.swap_total }}</p>
+                        <p><strong>Swap Used:</strong> {{ context.memory_info.swap_used }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="system-info p-4">
+                    <h5 class="text-light mb-4">Network Info</h5>
+                    <div class="text-light" id="network-info">
+                        {% for interface, stats in context.network_info.items() %}
+                        <div class="mb-3">
+                            <h6>{{ interface }}</h6>
+                            <p class="mb-1"><strong>IP Address:</strong> {{ stats.address or 'Not available' }}</p>
+                            <p class="mb-1"><strong>Bytes Sent:</strong> {{ stats.bytes_sent }}</p>
+                            <p class="mb-1"><strong>Bytes Received:</strong> {{ stats.bytes_recv }}</p>
+                            <p class="mb-0"><strong>Status:</strong> {{ 'Connected' if stats.isup else 'Disconnected' }}</p>
+                        </div>
+                                {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </main>
+{% endblock %}
+
+{% block script %}
+<script>
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatUptime(uptime) {
+    return uptime.split('.')[0]; // Remove microseconds
+}
+
+function updateSystemInfo() {
+    fetch('/api/system-info')
+        .then(response => response.json())
+        .then(data => {
+            // Update Platform Info
+            document.querySelector('#system-info').innerHTML = `
+                <p><strong>System:</strong> ${data.platform_info.system}</p>
+                <p><strong>Node:</strong> ${data.platform_info.node}</p>
+                <p><strong>Release:</strong> ${data.platform_info.release}</p>
+                <p><strong>Version:</strong> ${data.platform_info.version}</p>
+                <p><strong>Machine:</strong> ${data.platform_info.machine}</p>
+                <p><strong>Processor:</strong> ${data.platform_info.processor}</p>
+                <p><strong>Boot Time:</strong> ${formatUptime(data.platform_info.boot_time)}</p>
+            `;
+
+            // Update Memory Info
+            document.querySelector('#memory-info').innerHTML = `
+                <p><strong>Total:</strong> ${formatBytes(data.memory_info.total)}</p>
+                <p><strong>Available:</strong> ${formatBytes(data.memory_info.available)}</p>
+                <p><strong>Used:</strong> ${formatBytes(data.memory_info.used)}</p>
+                <p><strong>Free:</strong> ${formatBytes(data.memory_info.free)}</p>
+                <p><strong>Swap Total:</strong> ${formatBytes(data.memory_info.swap_total)}</p>
+                <p><strong>Swap Used:</strong> ${formatBytes(data.memory_info.swap_used)}</p>
+            `;
+
+            // Update Network Info
+            let networkHtml = '';
+            for (const [interface, stats] of Object.entries(data.network_info)) {
+                networkHtml += `
+                    <div class="mb-3">
+                        <h6>${interface}</h6>
+                        <p class="mb-1"><strong>IP Address:</strong> ${stats.address || 'Not available'}</p>
+                        <p class="mb-1"><strong>Bytes Sent:</strong> ${formatBytes(stats.bytes_sent)}</p>
+                        <p class="mb-1"><strong>Bytes Received:</strong> ${formatBytes(stats.bytes_recv)}</p>
+                        <p class="mb-0"><strong>Status:</strong> ${stats.isup ? '<span class="text-success">Connected</span>' : '<span class="text-danger">Disconnected</span>'}</p>
+                    </div>
+                `;
+            }
+            document.querySelector('#network-info').innerHTML = networkHtml;
+        });
+}
+
+function updateStats() {
+    fetch('/api/system-stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update CPU
+            document.querySelector('.cpu-percent').textContent = `${data.cpu_percent}%`;
+            document.querySelector('.cpu-progress').style.width = `${data.cpu_percent}%`;
+
+            // Update Memory
+            document.querySelector('.memory-percent').textContent = `${data.memory_percent}%`;
+            document.querySelector('.memory-progress').style.width = `${data.memory_percent}%`;
+
+            // Update Disk
+            document.querySelector('.disk-percent').textContent = `${data.disk_percent}%`;
+            document.querySelector('.disk-progress').style.width = `${data.disk_percent}%`;
+
+            // Update Process Count
+            document.querySelector('.process-count').textContent = data.process_count;
+
+            // Update Battery
+            document.querySelector('.battery-percent').textContent = `${data.battery.percent}%`;
+            document.querySelector('.battery-status').textContent = data.battery.status;
+            document.querySelector('.battery-time').textContent = data.battery.time_remaining;
+            document.querySelector('.battery-level').style.width = `${data.battery.percent}%`;
+
+            // Update battery icon class based on percentage
+            const batteryIcon = document.querySelector('.battery-icon');
+            batteryIcon.className = 'fas';
+            if (data.battery.percent <= 10) batteryIcon.classList.add('fa-battery-empty', 'text-danger', 'pulse');
+            else if (data.battery.percent <= 25) batteryIcon.classList.add('fa-battery-quarter', 'text-warning');
+            else if (data.battery.percent <= 50) batteryIcon.classList.add('fa-battery-half', 'text-warning');
+            else if (data.battery.percent <= 75) batteryIcon.classList.add('fa-battery-three-quarters', 'text-success');
+            else batteryIcon.classList.add('fa-battery-full', 'text-success');
+
+            // Add charging indicator
+            if (data.battery.power_plugged) {
+                batteryIcon.classList.add('fa-plug');
+            }
+        });
+}
+
+// Update all stats every second
+setInterval(() => {
+    updateStats();
+    updateSystemInfo();
+}, 1000);
+
+// Initial update
+updateStats();
+updateSystemInfo();
+</script>
+{% endblock %}

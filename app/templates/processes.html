@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block head %}
+<title>Processes - System Monitor</title>
+<style>
+    .process-card {
+        background: linear-gradient(145deg, #1a1a1a 0%, #2d2d2d 100%);
+        border: 1px solid #333;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .process-table {
+        border-radius: 12px;
+        overflow: auto;
+        max-height: calc(100vh - 300px);
+        scrollbar-width: thin;
+        scrollbar-color: #007bff rgba(255,255,255,0.1);
+    }
+    .process-table th {
+        background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%);
+        color: #fff;
+        font-weight: 500;
+    border: none;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 15px;
+    }
+    .process-table td {
+        border-color: rgba(255,255,255,0.05);
+        padding: 12px;
+        vertical-align: middle;
+    }
+    .process-row {
+        transition: background-color 0.2s;
+    }
+    .process-row:hover {
+        background-color: rgba(255,255,255,0.05);
+    }
+    .search-bar {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 25px;
+        padding: 12px 20px;
+        color: #fff;
+        font-size: 1rem;
+    }
+    .search-bar:focus {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.2);
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
+    }
+    .filter-badge {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 8px 20px;
+        margin: 0 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+    .filter-badge:hover {
+        background: rgba(255,255,255,0.2);
+        transform: translateY(-1px);
+    }
+    .filter-badge.active {
+        background: linear-gradient(145deg, #007bff, #0056b3);
+        box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+    }
+  .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    display: inline-block;
+        margin-right: 10px;
+        box-shadow: 0 0 5px currentColor;
+    }
+  .status-running {
+        background-color: #28a745;
+        color: #28a745;
+  }
+  .status-sleeping {
+        background-color: #ffc107;
+        color: #ffc107;
+  }
+  .status-stopped {
+        background-color: #dc3545;
+        color: #dc3545;
+  }
+  .status-zombie {
+        background-color: #6c757d;
+        color: #6c757d;
+    }
+    .resource-bar {
+        height: 6px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .cpu-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #007bff, #00e1ff);
+        transition: width 0.3s ease;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    }
+    .memory-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #84e486);
+        transition: width 0.3s ease;
+        box-shadow: 0 0 5px rgba(40, 167, 69, 0.5);
+    }
+    .error-message {
+        display: none;
+        background: linear-gradient(145deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.2));
+        border: 1px solid rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.1);
+    }
+    .loading-spinner {
+        display: none !important;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: #007bff;
+    }
+    .process-stats {
+        background: linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 100%);
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+    }
+    .stat-item {
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .btn-process {
+        padding: 6px 12px;
+        border-radius: 20px;
+    transition: all 0.2s;
+  }
+    .btn-process:hover {
+        transform: translateY(-1px);
+    }
+    
+    /* Webkit scrollbar styles */
+    .process-table::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .process-table::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+    }
+    
+    .process-table::-webkit-scrollbar-thumb {
+        background: #007bff;
+        border-radius: 4px;
+    }
+    
+    .process-table::-webkit-scrollbar-thumb:hover {
+        background: #0056b3;
+  }
+</style>
+{% endblock %}
+
+{% block pagetitle %}
+<div class="navbar-nav px-3 w-100">
+    <div class="text-light fw-bold fs-4">Process Manager</div>
+</div>
+{% endblock %}
+
+{% block body %}
+<main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+    <div class="container-fluid py-4">
+        <!-- Process Stats -->
+        <div class="process-stats mb-4">
+            <div class="stat-item">
+                <div class="stat-value" id="totalProcesses">-</div>
+                <div class="stat-label">Total Processes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="runningProcesses">-</div>
+                <div class="stat-label">Running</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="sleepingProcesses">-</div>
+                <div class="stat-label">Sleeping</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stoppedProcesses">-</div>
+                <div class="stat-label">Stopped</div>
+            </div>
+        </div>
+
+        <div class="process-card p-4">
+            <div class="error-message mb-4" id="errorMessage"></div>
+            
+            <div class="row align-items-center mb-4">
+                <div class="col-md-6">
+                    <input type="text" class="form-control search-bar" id="processSearch" placeholder="Search processes...">
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="filter-badge active" data-filter="all">All</span>
+                    <span class="filter-badge" data-filter="running">Running</span>
+                    <span class="filter-badge" data-filter="sleeping">Sleeping</span>
+                    <span class="filter-badge" data-filter="stopped">Stopped</span>
+                    <span class="filter-badge" data-filter="zombie">Zombie</span>
+                </div>
+      </div>
+            
+            <div class="text-center mb-4">
+                <div class="spinner-border loading-spinner" id="loadingSpinner" role="status">
+                    <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+            
+            <div class="table-responsive process-table">
+                <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>PID</th>
+              <th>Name</th>
+              <th>User</th>
+              <th>Status</th>
+                            <th>CPU %</th>
+                            <th>Memory %</th>
+                            <th>Threads</th>
+                            <th>Started</th>
+                            <th>Actions</th>
+            </tr>
+          </thead>
+                    <tbody id="processTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+let updateTimer = null;
+let lastUpdate = 0;
+const UPDATE_INTERVAL = 2000; // Reduced to 2 seconds for faster updates
+const THROTTLE_DELAY = 300; // Reduced to 300ms for better responsiveness
+
+function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 5000);
+}
+
+function showLoading(show) {
+    document.getElementById('loadingSpinner').style.display = show ? 'inline-block' : 'none';
+}
+
+function updateProcessStats(stats) {
+    // Update the stats with the server-provided values
+    document.getElementById('totalProcesses').textContent = stats.total;
+    document.getElementById('runningProcesses').textContent = stats.running;
+    document.getElementById('sleepingProcesses').textContent = stats.sleeping;
+    document.getElementById('stoppedProcesses').textContent = stats.stopped;
+}
+
+function updateProcesses() {
+    const now = Date.now();
+    if (now - lastUpdate < THROTTLE_DELAY) return;
+    lastUpdate = now;
+    
+    fetch('/api/processes')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('processTableBody');
+            let html = '';
+            
+            // Update stats with server-provided statistics
+            updateProcessStats(data.stats);
+            
+            data.processes.forEach(process => {
+                const cpuPercent = parseFloat(process.cpu_percent).toFixed(1);
+                const memoryPercent = parseFloat(process.memory_percent).toFixed(1);
+                const status = process.status.toLowerCase();
+                
+                html += `
+                    <tr class="process-row" data-status="${status}">
+                        <td>${process.pid}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="status-indicator status-${status}"></span>
+                                ${process.name}
+                            </div>
+                        </td>
+                        <td>${process.username}</td>
+                        <td>${process.status}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="resource-bar flex-grow-1 me-2">
+                                    <div class="cpu-bar-fill" style="width: ${cpuPercent}%"></div>
+                                </div>
+                                <span>${cpuPercent}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="resource-bar flex-grow-1 me-2">
+                                    <div class="memory-bar-fill" style="width: ${memoryPercent}%"></div>
+                                </div>
+                                <span>${memoryPercent}%</span>
+                            </div>
+                        </td>
+                        <td>${process.num_threads}</td>
+                        <td>${process.create_time}</td>
+                        <td>
+                            <button class="btn btn-process btn-sm btn-outline-info" onclick="window.location.href='/processes/${process.pid}'">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Reapply current filter
+            const activeFilter = document.querySelector('.filter-badge.active')?.dataset.filter || 'all';
+            filterProcesses(activeFilter);
+            
+            // Reapply search
+            const searchTerm = document.getElementById('processSearch').value.toLowerCase();
+            if (searchTerm) {
+                searchProcesses(searchTerm);
+            }
+        })
+        .catch(error => {
+            showError('Failed to load processes: ' + error.message);
+        });
+}
+
+function searchProcesses(term) {
+    const rows = document.querySelectorAll('.process-row');
+    rows.forEach(row => {
+        const processName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const username = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+        row.style.display = (processName.includes(term) || username.includes(term)) ? '' : 'none';
+    });
+}
+
+function filterProcesses(filter) {
+    const rows = document.querySelectorAll('.process-row');
+    rows.forEach(row => {
+        if (filter === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.dataset.status === filter ? '' : 'none';
+        }
+    });
+}
+
+function throttledSearch(term) {
+    clearTimeout(updateTimer);
+    updateTimer = setTimeout(() => searchProcesses(term), THROTTLE_DELAY);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('processSearch');
+    searchInput.addEventListener('input', function() {
+        throttledSearch(this.value.toLowerCase());
+    });
+    
+    const filterBadges = document.querySelectorAll('.filter-badge');
+    filterBadges.forEach(badge => {
+        badge.addEventListener('click', function() {
+            filterBadges.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            filterProcesses(this.dataset.filter);
+        });
+    });
+    
+    setInterval(updateProcesses, UPDATE_INTERVAL);
+    updateProcesses();
+  });
+</script>
+{% endblock %}
